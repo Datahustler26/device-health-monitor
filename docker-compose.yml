@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dhm-postgres
+    environment:
+      POSTGRES_USER: dhm_user
+      POSTGRES_PASSWORD: dhm_password
+      POSTGRES_DB: device_health_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dhm_user -d device_health_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dhm-network
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dhm-fastapi
+    environment:
+      DATABASE_URL: postgresql://dhm_user:dhm_password@postgres:5432/device_health_db
+      APP_NAME: Device Health Monitoring System
+      DEBUG: "False"
+      ENVIRONMENT: production
+      SLACK_ENABLED: "True"
+      SCHEDULER_ENABLED: "True"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - dhm-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: dhm-jaeger
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - dhm-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  dhm-network:
+    driver: bridge
