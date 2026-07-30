@@ -436,13 +436,9 @@ gunicorn -w 4 \
 | Time to deploy | < 5 minutes |
 | Uptime target | 99.9% |
 
----
 
-## 📄 License
 
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
----
 
 <div align="center">
 Made for enterprise device monitoring
